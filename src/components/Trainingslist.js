@@ -42,14 +42,35 @@ export default function Trainingslist() {
         SortArrow: forwardRef((props, ref) => <ArrowDownward {...props} ref={ref} />),
         ThirdStateCheck: forwardRef((props, ref) => <Remove {...props} ref={ref} />),
         ViewColumn: forwardRef((props, ref) => <ViewColumn {...props} ref={ref} />)
-    };    
-
-    
+    };
 
     const fetchData = () => {
         fetch('https://customerrest.herokuapp.com/gettrainings')
         .then(response => response.json())
         .then(data => setTrainings(data))
+    }
+
+    const getCustomerName = (customer) => {
+        try {
+            if (typeof customer.firstname !== 'undefined') {
+                let customerName = customer.firstname + " " + customer.lastname;
+                return customerName;
+            } else {
+                return 'Unknown';
+            }
+        }
+        catch (e) {
+            console.log('Customer not in database')
+            return 'Unknown';
+        }
+    }
+
+    const deleteTraining = (id) => {
+        if (window.confirm('Are you sure you want to delete the training?')) {
+            fetch('https://customerrest.herokuapp.com/api/trainings/' + id, {method: 'DELETE'})
+            .then(res => fetchData())
+            .catch(err => console.error(err))
+        }
     }
     
     return (
@@ -64,18 +85,18 @@ export default function Trainingslist() {
             title="Trainings list"
             columns={[
                 { title: 'Activity', field: 'activity' },
-                { title: 'Date', field:'date', render: rowData => moment(rowData.date).format('lll')},
+                { title: 'Date', field:'date', defaultSort:'asc', render: rowData => moment(rowData.date).format('lll')},
                 { title: 'Duration (min)', field: 'duration' },
-                { title: 'Customer', field: ('customer.firstname','customer.lastname'), 
-                render: rowData => rowData.customer.firstname + " " + rowData.customer.lastname }
+                { title: 'Customer', 
+                render: rowData => getCustomerName(rowData.customer) }
             ]}
             data={trainings}
             actions={[
                 {
                     icon: Delete,
-                    tooltip: 'Delete User',
-                    onClick: (event, rowData) => window.confirm("You want to delete " + rowData.name)
-                }
+                    tooltip: 'Delete training',
+                    onClick: (event, rowData) => deleteTraining(rowData.id)
+                },
               ]} 
         />
     )

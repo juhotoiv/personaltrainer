@@ -1,5 +1,6 @@
 import React, { useState, useEffect, forwardRef } from 'react';
 import MaterialTable from 'material-table';
+import AddTraining from './AddTraining'
 
 import AddBox from '@material-ui/icons/AddBox';
 import ArrowDownward from '@material-ui/icons/ArrowDownward';
@@ -17,7 +18,7 @@ import SaveAlt from '@material-ui/icons/SaveAlt';
 import Search from '@material-ui/icons/Search';
 import ViewColumn from '@material-ui/icons/ViewColumn';
 import Delete from '@material-ui/icons/Delete';
-import FitnessCenter from '@material-ui/icons/FitnessCenter';
+import { Button } from '@material-ui/core';
 
 export default function Customerlist() {
     const tableIcons = {
@@ -48,9 +49,62 @@ export default function Customerlist() {
         .then(data => setCustomers(data.content))
     }
 
+    const saveCustomer = (customer) => {
+        fetch('https://customerrest.herokuapp.com/api/customers', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(customer)
+        })
+        .then(res => fetchData())
+        .catch(err => console.error(err))
+    }
+
+    const updateCustomer = (customer, link) => {
+        fetch(link, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(customer)
+        })
+        .then(res => fetchData())
+        .catch(err => console.error(err))
+    }
+
+    const deleteCustomer = (link, name) => {
+        if (window.confirm('Are you sure you want to delete ' + name + '?')) {
+            fetch(link, {method: 'DELETE'})
+            .then(res => fetchData())
+            .catch(err => console.error(err))
+        }
+    }
+
+    const addTraining = (training) => {
+        fetch('https://customerrest.herokuapp.com/api/trainings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(training)
+        })
+        .then(res => fetchData())
+        .catch(err => console.error(err))
+    }
+
     useEffect(() => fetchData(), []);
 
-    console.log(customers)
+    const checkRowdata = (rowData) => {
+        try {
+            if (typeof rowData.links !== 'undefined') {
+                return (<AddTraining addTraining={addTraining} customerLink={rowData.links[0].href}></AddTraining>);
+            }
+        }
+        catch (e) {
+            return (<Button style={{margin: 10}}variant="outlined" color="primary"> Add training</Button>)
+        }
+    }
 
     return (
         <MaterialTable
@@ -59,36 +113,43 @@ export default function Customerlist() {
                 pageSize: 10,
                 pageSizeOptions: [5, 10, 20, 50],
                 toolbar: true,
-                paging: true
+                paging: true,
             }}
             title="Customer list"
             columns={[
-                { title: 'First name', field: 'firstname' },
+                { title: 'First name', field: 'firstname', defaultSort:'asc' },
                 { title: 'Last name', field: 'lastname' },
                 { title: 'Email', field: 'email' },
                 { title: 'Phone', field: 'phone' },
                 { title: 'Address', field: 'streetaddress'},
                 { title: 'Postcode', field: 'postcode'},
-                { title: 'City', field: 'city'}
+                { title: 'City', field: 'city'},
+                { title: 'Add training', render: rowData => checkRowdata(rowData) }
             ]}
             data={customers}
             actions={[
                 {
-                    icon: Edit,
-                    tooltip: 'Edit User',
-                    onClick: (event, rowData) => alert("You edited " + rowData.name)
-                },
-                {
                     icon: Delete,
-                    tooltip: 'Delete User',
-                    onClick: (event, rowData) => window.confirm("You want to delete " + rowData.name)
+                    tooltip: 'Delete customer',
+                    onClick: (event, rowData) => deleteCustomer(rowData.links[0].href, rowData.firstname)
                 },
-                {
-                    icon: FitnessCenter,
-                    tooltip: 'Add Training',
-                    onClick: (event, rowData) => window.confirm("You want to delete " + rowData.name)
-                }
-              ]} 
+              ]}
+            editable={{
+                onRowAdd: newData =>
+                    new Promise((resolve, reject) => {
+                        setTimeout(() => {
+                            saveCustomer(newData)
+                            resolve()
+                        }, 1000)
+                    }),
+                onRowUpdate: (newData, oldData) =>
+                    new Promise((resolve, reject) => {
+                      setTimeout(() => {
+                        updateCustomer(newData, oldData.links[0].href)
+                        resolve()
+                      }, 1000)
+                    }),
+            }}
         />
     )
 }
